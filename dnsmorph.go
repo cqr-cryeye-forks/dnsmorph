@@ -370,7 +370,11 @@ func aLookup(Domain string) string {
 // performs a geolocation lookup on input IP, returns country + city
 func geoLookup(inputIP string) string {
 	if inputIP != "" {
-		db, err := maxminddb.Open("GeoLite2-City.mmdb")
+		_, currentFile, _, _ := runtime.Caller(0)
+		directory := filepath.Dir(currentFile)
+		dbFilePath := filepath.Join(directory, "GeoLite2-City.mmdb")
+
+		db, err := maxminddb.Open(dbFilePath)
 		if err != nil {
 			log.Fatal(err)
 		}
