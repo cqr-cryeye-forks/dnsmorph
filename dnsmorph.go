@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bufio"
 	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/cavaliercoder/grab"
@@ -102,12 +101,31 @@ type OutJSON struct {
 // prints Record data
 func (r *Record) printRecordData(writer *tabwriter.Writer, verbose bool) {
 	if verbose != false {
-		fmt.Fprintln(writer, r.Technique+"\t"+r.Domain+"\t"+r.A+
-			"\t"+r.WhoisCreation+"\t"+r.WhoisModification+"\t"+r.Geolocation)
+		recordDict := map[string]string{
+			"Technique":         r.Technique,
+			"Domain":            r.Domain,
+			"A":                 r.A,
+			"WhoisCreation":     r.WhoisCreation,
+			"WhoisModification": r.WhoisModification,
+			"Geolocation":       r.Geolocation,
+		}
+		var recordStr string
+		for key, value := range recordDict {
+			recordStr += fmt.Sprintf(`"%s": "%s", `, key, value)
+		}
+
+		// Remove trailing comma and space
+		recordStr = strings.TrimSuffix(recordStr, ", ")
+
+		// Enclose in curly braces
+		recordStr = "{" + recordStr + "}"
+
+		fmt.Fprintln(writer, recordStr)
 		writer.Flush()
-	} else {
-		fmt.Fprintln(writer, r.Domain+"\t"+r.A+"\t"+r.WhoisCreation+"\t"+r.WhoisModification+"\t"+r.Geolocation)
-		writer.Flush()
+
+		//fmt.Fprintln(writer, r.Technique+"\t"+r.Domain+"\t"+r.A+
+		//	"\t"+r.WhoisCreation+"\t"+r.WhoisModification+"\t"+r.Geolocation)
+		//writer.Flush()
 	}
 }
 
@@ -483,7 +501,7 @@ func printReport(technique string, results []string, tld string) {
 		runLookups(technique, results, tld, out, false, false, *whoisflag)
 	case *verbose == true:
 		for _, result := range results {
-			if (*idn == true && technique == "homograph") {
+			if *idn == true && technique == "homograph" {
 				idn_result, err := idna.Lookup.ToASCII(result)
 				if err == nil {
 					printResults(w, technique, idn_result, tld)
@@ -494,7 +512,7 @@ func printReport(technique string, results []string, tld string) {
 		}
 	case *verbose == false && *resolve == false:
 		for _, result := range results {
-			if (*idn == true && technique == "homograph") {
+			if *idn == true && technique == "homograph" {
 				idn_result, err := idna.Lookup.ToASCII(result)
 				if err == nil {
 					fmt.Println(idn_result + "." + tld)
@@ -607,17 +625,17 @@ func outputToFile(targets []string) {
 			g.Printf("done")
 		}
 	}
-	if *outjson != false {
-		var output OutJSON
-		for r := range out {
-			output.Results = append(output.Results, r)
-		}
-		data, err := json.Marshal(output)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("%s\n", data)
-	}
+	//if *outjson != false {
+	//	var output OutJSON
+	//	for r := range out {
+	//		output.Results = append(output.Results, r)
+	//	}
+	//	data, err := json.Marshal(output)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	fmt.Printf("%s\n", data)
+	//}
 }
 
 // helper function to specify permutation attacks to be performed
@@ -775,8 +793,8 @@ func hyphenationAttack(domain string) []string {
 func doppelgangerAttack(domain string) []string {
 	results := []string{}
 
-	for i := len(domain)-1; i > 0; i-- {
-		if (rune(domain[i]) == '.' || rune(domain[i]) == '-') {
+	for i := len(domain) - 1; i > 0; i-- {
+		if rune(domain[i]) == '.' || rune(domain[i]) == '-' {
 			results = append(results, fmt.Sprintf("%s%s", domain[:i], domain[i+1:]))
 		}
 	}
